@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require("express");
 const app = express();
 const cors = require("cors");
@@ -15,9 +17,9 @@ const Book = require("./models/books.models");
 const Category = require("./models/category.models");
 const Product = require("./models/products.models");
 const Cart = require("./models/cart.models");
-const Wishlist = require("./models/wishlist.models")
+const Wishlist = require("./models/wishlist.models");
 const User = require("./models/user.models");
-const Address = require("./models/address.models")
+const Address = require("./models/address.models");
 
 app.use(express.json());
 
@@ -88,12 +90,10 @@ async function createCategory(newCategory) {
 app.post("/categories", async (req, res) => {
   try {
     const savedCategory = await createCategory(req.body);
-    res
-      .status(201)
-      .json({
-        message: "category added successfully.",
-        category: savedCategory,
-      });
+    res.status(201).json({
+      message: "category added successfully.",
+      category: savedCategory,
+    });
   } catch (error) {
     console.log("error in saving category:", error);
     res
@@ -147,9 +147,6 @@ app.get("/categories", async (req, res) => {
   }
 });
 
-
-
-
 // Add or update product in cart
 app.post("/carts/:userId/items", async (req, res) => {
   const { userId } = req.params;
@@ -166,7 +163,7 @@ app.post("/carts/:userId/items", async (req, res) => {
     } else {
       // Check if the product is already in the cart
       const existingItem = cart.items.find(
-        (item) => item.productId.toString() === productId,
+        (item) => item.productId.toString() === productId
       );
 
       if (existingItem) {
@@ -188,82 +185,97 @@ app.post("/carts/:userId/items", async (req, res) => {
 });
 
 // Increase quantity of a product in the cart
-app.post('/carts/:userId/items/:productId/increase', async (req, res) => {
+app.post("/carts/:userId/items/:productId/increase", async (req, res) => {
   const { userId, productId } = req.params;
 
   try {
     let cart = await Cart.findOne({ userId });
-    if (!cart) return res.status(404).json({ error: 'Cart not found' });
+    if (!cart) return res.status(404).json({ error: "Cart not found" });
 
-    const existingItem = cart.items.find(item => item.productId.toString() === productId);
+    const existingItem = cart.items.find(
+      (item) => item.productId.toString() === productId
+    );
     if (existingItem) {
       existingItem.quantity += 1;
       const updatedCart = await cart.save();
       res.status(200).json(updatedCart);
     } else {
-      res.status(404).json({ error: 'Product not found in cart' });
+      res.status(404).json({ error: "Product not found in cart" });
     }
   } catch (error) {
-    res.status(500).json({ error: 'Failed to increase quantity', details: error.message });
+    res
+      .status(500)
+      .json({ error: "Failed to increase quantity", details: error.message });
   }
 });
 
 // Decrease quantity of a product in the cart
-app.post('/carts/:userId/items/:productId/decrease', async (req, res) => {
+app.post("/carts/:userId/items/:productId/decrease", async (req, res) => {
   const { userId, productId } = req.params;
 
   try {
     let cart = await Cart.findOne({ userId });
-    if (!cart) return res.status(404).json({ error: 'Cart not found' });
+    if (!cart) return res.status(404).json({ error: "Cart not found" });
 
-    const existingItem = cart.items.find(item => item.productId.toString() === productId);
+    const existingItem = cart.items.find(
+      (item) => item.productId.toString() === productId
+    );
     if (existingItem) {
-      if(existingItem.quantity > 1){
+      if (existingItem.quantity > 1) {
         existingItem.quantity -= 1;
-      }  else {
+      } else {
         //remove item from the cart
-        cart.items = cart.items.filter(item=> item.productId.toString() !== productId)
+        cart.items = cart.items.filter(
+          (item) => item.productId.toString() !== productId
+        );
       }
-      
+
       const updatedCart = await cart.save();
       res.status(200).json(updatedCart);
     } else {
-      res.status(404).json({ error: 'Product not found in cart' });
+      res.status(404).json({ error: "Product not found in cart" });
     }
   } catch (error) {
-    res.status(500).json({ error: 'Failed to increase quantity', details: error.message });
+    res
+      .status(500)
+      .json({ error: "Failed to increase quantity", details: error.message });
   }
 });
 
 //processing products to checkout and calculate total price
-app.get("/carts/:userId/checkout", async(req,res)=>{
-  const {userId} = req.params;
-  
-try{
-const cart = await Cart.findOne({ userId }).populate('items.productId');
-if (!cart) return res.status(404).json({ error: 'Cart not found' });
+app.get("/carts/:userId/checkout", async (req, res) => {
+  const { userId } = req.params;
 
-const totalPrice = cart.items.reduce((total, item) => {
-  return total + (item.productId.price * item.quantity);
-}, 0);
+  try {
+    const cart = await Cart.findOne({ userId }).populate("items.productId");
+    if (!cart) return res.status(404).json({ error: "Cart not found" });
 
-res.status(200).json({ totalPrice });
-} catch(error){
-  res.status(500).json({error:"failed to calculate total price", details:error.message})
-}
-})
+    const totalPrice = cart.items.reduce((total, item) => {
+      return total + item.productId.price * item.quantity;
+    }, 0);
 
+    res.status(200).json({ totalPrice });
+  } catch (error) {
+    res.status(500).json({
+      error: "failed to calculate total price",
+      details: error.message,
+    });
+  }
+});
 
 // move product to wishlist
-app.post('/carts/:userId/items/:productId/wishlist', async (req, res) => {
+app.post("/carts/:userId/items/:productId/wishlist", async (req, res) => {
   const { userId, productId } = req.params;
 
   try {
     let cart = await Cart.findOne({ userId });
-    if (!cart) return res.status(404).json({ error: 'Cart not found' });
+    if (!cart) return res.status(404).json({ error: "Cart not found" });
 
-    const cartItemIndex = cart.items.findIndex(item => item.productId.toString() === productId);
-    if (cartItemIndex === -1) return res.status(404).json({ error: 'Product not found in cart' });
+    const cartItemIndex = cart.items.findIndex(
+      (item) => item.productId.toString() === productId
+    );
+    if (cartItemIndex === -1)
+      return res.status(404).json({ error: "Product not found in cart" });
 
     // Remove the item from the cart
     const [cartItem] = cart.items.splice(cartItemIndex, 1);
@@ -276,7 +288,9 @@ app.post('/carts/:userId/items/:productId/wishlist', async (req, res) => {
       wishlist = new Wishlist({ userId, items: [{ productId }] });
     } else {
       // here checking if the product is already in the wishlist
-      const existingItem = wishlist.items.find(item => item.productId.toString() === productId);
+      const existingItem = wishlist.items.find(
+        (item) => item.productId.toString() === productId
+      );
       if (!existingItem) {
         // Add the item to the wishlist
         wishlist.items.push({ productId });
@@ -287,52 +301,52 @@ app.post('/carts/:userId/items/:productId/wishlist', async (req, res) => {
 
     res.status(200).json({ cart, wishlist: updatedWishlist });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to move product to wishlist', details: error.message });
+    res.status(500).json({
+      error: "Failed to move product to wishlist",
+      details: error.message,
+    });
   }
 });
 
-
-app.delete('/carts/:userId/items/:productId', async (req, res) => {
+app.delete("/carts/:userId/items/:productId", async (req, res) => {
   const { userId, productId } = req.params;
 
   try {
     const cart = await Cart.findOne({ userId });
     if (!cart) {
       console.error(`Cart not found for userId=${userId}`);
-      return res.status(404).json({ error: 'Cart not found' });
+      return res.status(404).json({ error: "Cart not found" });
     }
 
-    cart.items = cart.items.filter(item => {
-      if (productId === 'null') {
+    cart.items = cart.items.filter((item) => {
+      if (productId === "null") {
         return item.productId === null;
       }
       return item.productId && String(item.productId._id) !== productId;
     });
 
-   // console.log('Cart items after update:', cart.items);
+    // console.log('Cart items after update:', cart.items);
     await cart.save();
-   // console.log(`Successfully removed item with productId=${productId} from cart for userId=${userId}`);
+    // console.log(`Successfully removed item with productId=${productId} from cart for userId=${userId}`);
     res.status(200).json(cart);
   } catch (error) {
-    console.error('Error removing item from cart:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error("Error removing item from cart:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
-
-
-
-
 
 // Get cart by userId
 app.get("/carts/:userId", async (req, res) => {
   const { userId } = req.params;
 
   try {
-    const cart = await Cart.findOne({userId}).populate({path:"items.productId",
-              model:"Product"                                         });
+    const cart = await Cart.findOne({ userId }).populate({
+      path: "items.productId",
+      model: "Product",
+    });
 
     if (cart) {
-     // console.log('Populated Cart:', JSON.stringify(cart, null, 2)); 
+      // console.log('Populated Cart:', JSON.stringify(cart, null, 2));
 
       res.status(200).json(cart);
     } else {
@@ -345,29 +359,30 @@ app.get("/carts/:userId", async (req, res) => {
   }
 });
 
-
-
-
 //wishlist part started
-//get wishlist 
-app.get("/wishlists/:userId", async (req,res)=>{
-  const {userId} = req.params
+//get wishlist
+app.get("/wishlists/:userId", async (req, res) => {
+  const { userId } = req.params;
 
-  try{
-    const wishlist = await Wishlist.findOne({userId}).populate({path:"items.productId",
-              model:"Product"  })
-    if(wishlist){
-      res.status(200).json(wishlist)
+  try {
+    const wishlist = await Wishlist.findOne({ userId }).populate({
+      path: "items.productId",
+      model: "Product",
+    });
+    if (wishlist) {
+      res.status(200).json(wishlist);
     } else {
-      res.status(404).json({error:"wishlist not found"})
+      res.status(404).json({ error: "wishlist not found" });
     }
-  }catch (error) {
-    res.status(500).json({ error: 'Failed to retrieve wishlist', details: error.message });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: "Failed to retrieve wishlist", details: error.message });
   }
-})
+});
 
 // Add a product to the wishlist directly
-app.post('/wishlists/:userId/items', async (req, res) => {
+app.post("/wishlists/:userId/items", async (req, res) => {
   const { userId } = req.params;
   const { productId } = req.body;
 
@@ -376,7 +391,9 @@ app.post('/wishlists/:userId/items', async (req, res) => {
     if (!wishlist) {
       wishlist = new Wishlist({ userId, items: [{ productId }] });
     } else {
-      const existingItem = wishlist.items.find(item => item.productId.toString() === productId);
+      const existingItem = wishlist.items.find(
+        (item) => item.productId.toString() === productId
+      );
       if (!existingItem) {
         wishlist.items.push({ productId });
       }
@@ -385,59 +402,75 @@ app.post('/wishlists/:userId/items', async (req, res) => {
     const updatedWishlist = await wishlist.save();
     res.status(200).json(updatedWishlist);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to add item to wishlist', details: error.message });
+    res.status(500).json({
+      error: "Failed to add item to wishlist",
+      details: error.message,
+    });
   }
 });
 
 // Remove a product from the wishlist
-app.delete('/wishlists/:userId/items/:productId', async (req, res) => {
+app.delete("/wishlists/:userId/items/:productId", async (req, res) => {
   const { userId, productId } = req.params;
 
   try {
     let wishlist = await Wishlist.findOne({ userId });
-    if (!wishlist) return res.status(404).json({ error: 'Wishlist not found' });
+    if (!wishlist) return res.status(404).json({ error: "Wishlist not found" });
 
-    wishlist.items = wishlist.items.filter(item => item.productId.toString() !== productId);
+    wishlist.items = wishlist.items.filter(
+      (item) => item.productId.toString() !== productId
+    );
     const updatedWishlist = await wishlist.save();
     res.status(200).json(updatedWishlist);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to remove item from wishlist', details: error.message });
+    res.status(500).json({
+      error: "Failed to remove item from wishlist",
+      details: error.message,
+    });
   }
 });
 
 // Move an item from the wishlist to the cart
-app.post('/wishlists/:userId/items/:productId/move-to-cart', async (req, res) => {
-  const { userId, productId } = req.params;
+app.post(
+  "/wishlists/:userId/items/:productId/move-to-cart",
+  async (req, res) => {
+    const { userId, productId } = req.params;
 
-  try {
-    // Find and remove the item from the wishlist
-    let wishlist = await Wishlist.findOne({ userId });
-    if (!wishlist) return res.status(404).json({ error: 'Wishlist not found' });
+    try {
+      // Find and remove the item from the wishlist
+      let wishlist = await Wishlist.findOne({ userId });
+      if (!wishlist)
+        return res.status(404).json({ error: "Wishlist not found" });
 
-    wishlist.items = wishlist.items.filter(item => item.productId.toString() !== productId);
-    await wishlist.save();
+      wishlist.items = wishlist.items.filter(
+        (item) => item.productId.toString() !== productId
+      );
+      await wishlist.save();
 
-    // Find or create the cart
-    let cart = await Cart.findOne({ userId });
-    if (!cart) {
-      cart = new Cart({ userId, items: [{ productId, quantity: 1 }] });
-    } else {
-      const existingItem = cart.items.find(item => item.productId.toString() === productId);
-      if (existingItem) {
-        existingItem.quantity += 1;
+      // Find or create the cart
+      let cart = await Cart.findOne({ userId });
+      if (!cart) {
+        cart = new Cart({ userId, items: [{ productId, quantity: 1 }] });
       } else {
-        cart.items.push({ productId, quantity: 1 });
+        const existingItem = cart.items.find(
+          (item) => item.productId.toString() === productId
+        );
+        if (existingItem) {
+          existingItem.quantity += 1;
+        } else {
+          cart.items.push({ productId, quantity: 1 });
+        }
       }
+
+      const updatedCart = await cart.save();
+      res.status(200).json(updatedCart);
+    } catch (error) {
+      res
+        .status(500)
+        .json({ error: "Failed to move item to cart", details: error.message });
     }
-
-    const updatedCart = await cart.save();
-    res.status(200).json(updatedCart);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to move item to cart', details: error.message });
   }
-});
-
-
+);
 
 //to add data for user
 app.post("/users", async (req, res) => {
@@ -446,36 +479,41 @@ app.post("/users", async (req, res) => {
     const savedUser = await user.save();
     res.status(201).json(savedUser);
   } catch (error) {
-    res.status(500).json({ error: "Failed to create user", details: error.message });
+    res
+      .status(500)
+      .json({ error: "Failed to create user", details: error.message });
   }
 });
 
 //update user data
-app.put('/users/:userId', async (req, res) => {
+app.put("/users/:userId", async (req, res) => {
   const { userId } = req.params;
   const updates = req.body;
 
   try {
-    const updatedUser = await User.findByIdAndUpdate(userId, updates, { new: true });
+    const updatedUser = await User.findByIdAndUpdate(userId, updates, {
+      new: true,
+    });
     if (updatedUser) {
       res.status(200).json(updatedUser);
     } else {
-      res.status(404).json({ error: 'User not found' });
+      res.status(404).json({ error: "User not found" });
     }
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update user', details: error.message });
+    res
+      .status(500)
+      .json({ error: "Failed to update user", details: error.message });
   }
 });
-
 
 //get user
 app.get("/users/:userId", async (req, res) => {
   const { userId } = req.params;
 
   try {
-    const user = await User.findById(userId).populate({path: "cart.items.productId",
-    model:"Product"                                                  }).populate("addresses");  
-
+    const user = await User.findById(userId)
+      .populate({ path: "cart.items.productId", model: "Product" })
+      .populate("addresses");
 
     if (user) {
       res.status(200).json(user);
@@ -489,14 +527,12 @@ app.get("/users/:userId", async (req, res) => {
   }
 });
 
-
-
-
 //address
 // Add new address
-app.post('/users/:userId/addresses', async (req, res) => {
+app.post("/users/:userId/addresses", async (req, res) => {
   const { userId } = req.params;
-  const { addressLine1, addressLine2, city, state, postalCode, country } = req.body;
+  const { addressLine1, addressLine2, city, state, postalCode, country } =
+    req.body;
 
   try {
     const address = new Address({
@@ -506,39 +542,46 @@ app.post('/users/:userId/addresses', async (req, res) => {
       city,
       state,
       postalCode,
-      country
+      country,
     });
 
     const savedAddress = await address.save();
 
     // Add address to user's addresses array
-    await User.findByIdAndUpdate(userId, { $push: { addresses: savedAddress._id } });
+    await User.findByIdAndUpdate(userId, {
+      $push: { addresses: savedAddress._id },
+    });
 
     res.status(201).json(savedAddress);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to add address', details: error.message });
+    res
+      .status(500)
+      .json({ error: "Failed to add address", details: error.message });
   }
 });
 
 // Get all addresses for a user
-app.get('/users/:userId/addresses', async (req, res) => {
+app.get("/users/:userId/addresses", async (req, res) => {
   const { userId } = req.params;
 
   try {
-    const user = await User.findById(userId).populate('addresses');
+    const user = await User.findById(userId).populate("addresses");
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: "User not found" });
     }
     res.status(200).json(user.addresses);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to retrieve addresses', details: error.message });
+    res
+      .status(500)
+      .json({ error: "Failed to retrieve addresses", details: error.message });
   }
 });
 
 // Updating an address
-app.put('/addresses/:addressId', async (req, res) => {
+app.put("/addresses/:addressId", async (req, res) => {
   const { addressId } = req.params;
-  const { addressLine1, addressLine2, city, state, postalCode, country } = req.body;
+  const { addressLine1, addressLine2, city, state, postalCode, country } =
+    req.body;
 
   try {
     const updatedAddress = await Address.findByIdAndUpdate(
@@ -548,38 +591,39 @@ app.put('/addresses/:addressId', async (req, res) => {
     );
 
     if (!updatedAddress) {
-      return res.status(404).json({ error: 'Address not found' });
+      return res.status(404).json({ error: "Address not found" });
     }
 
     res.status(200).json(updatedAddress);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update address', details: error.message });
+    res
+      .status(500)
+      .json({ error: "Failed to update address", details: error.message });
   }
 });
 
 // Deleting an address
-app.delete('/addresses/:addressId', async (req, res) => {
+app.delete("/addresses/:addressId", async (req, res) => {
   const { addressId } = req.params;
 
   try {
     const deletedAddress = await Address.findByIdAndDelete(addressId);
     if (!deletedAddress) {
-      return res.status(404).json({ error: 'Address not found' });
+      return res.status(404).json({ error: "Address not found" });
     }
 
     // Remove address from user's addresses array
-    await User.findByIdAndUpdate(deletedAddress.userId, { $pull: { addresses: addressId } });
+    await User.findByIdAndUpdate(deletedAddress.userId, {
+      $pull: { addresses: addressId },
+    });
 
-    res.status(200).json({ message: 'Address deleted successfully' });
+    res.status(200).json({ message: "Address deleted successfully" });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to delete address', details: error.message });
+    res
+      .status(500)
+      .json({ error: "Failed to delete address", details: error.message });
   }
 });
-
-
-
-
-
 
 //updating products
 async function updateProduct(productId, dataToUpdate) {
@@ -587,7 +631,7 @@ async function updateProduct(productId, dataToUpdate) {
     const updatedProduct = await Product.findByIdAndUpdate(
       productId,
       dataToUpdate,
-      { new: true },
+      { new: true }
     );
     return updatedProduct;
   } catch (error) {
@@ -598,12 +642,10 @@ app.post("/products/:productId", async (req, res) => {
   try {
     const updatedProduct = await updateProduct(req.params.productId, req.body);
     if (updatedProduct) {
-      res
-        .status(200)
-        .json({
-          message: "Book updated successfully",
-          updatedProduct: updatedProduct,
-        });
+      res.status(200).json({
+        message: "Book updated successfully",
+        updatedProduct: updatedProduct,
+      });
     } else {
       res.status(404).json({ error: "Book does not exist." });
     }
@@ -617,7 +659,7 @@ async function updatePrice(productId, dataToUpdate) {
     const updatedPrice = await Product.findByIdAndUpdate(
       productId,
       dataToUpdate,
-      { new: true },
+      { new: true }
     );
     return updatedPrice;
   } catch (error) {
@@ -628,12 +670,10 @@ app.post("/products/:productId/price", async (req, res) => {
   try {
     const updatedPrice = await updatePrice(req.params.productId, req.body);
     if (updatedPrice) {
-      res
-        .status(200)
-        .json({
-          message: "Book updated successfully.",
-          updatedPrice: updatedPrice,
-        });
+      res.status(200).json({
+        message: "Book updated successfully.",
+        updatedPrice: updatedPrice,
+      });
     } else {
       res.status(404).json({ error: "book does not exist" });
     }
@@ -642,7 +682,27 @@ app.post("/products/:productId/price", async (req, res) => {
   }
 });
 
+// clearing cart after order confirms
+app.delete("/carts/:userId/clear", async (req, res) => {
+  const { userId } = req.params;
 
+  try {
+    const cart = await Cart.findOne({ userId });
+    if (!cart) {
+      return res.status(404).json({ error: "Cart not found" });
+    }
+
+    // Clear all items from the cart
+    cart.items = [];
+    await cart.save();
+
+    res.status(200).json({ message: "Cart cleared successfully" });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: "Failed to clear cart", details: error.message });
+  }
+});
 
 const PORT = 3000;
 app.listen(PORT, (req, res) => {

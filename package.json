@@ -12,6 +12,7 @@
   "dependencies": {
     "@types/node": "^18.0.6",
     "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "mongoose": "^8.4.1",
     "vercel": "^35.2.2"
